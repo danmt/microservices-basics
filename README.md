@@ -52,6 +52,7 @@ Since the service is structurally ready to be transformed to a microservice usin
 1. Go to the service folder using you preferred command line tool
 2. Execute the command `npm i --save @nestjs/microservices`
 3. Update the entry point of the service `src/main.ts` with the service configuration
+4. Update the `AppController` to use the Microservice Message pattern to serve clients
 
 The entry point should end up looking like this:
 
@@ -83,3 +84,177 @@ Are you wondering what's going on here? Let's explain it.
 3. Inside the microservice options we tell NestJs the host and port we want to use.
 
 > NOTE: You can choose the host and port of your preference. Also, NestJs multiple transport options you can choose from.
+
+The `AppController` will end up looking like this:
+
+```typescript
+import { Controller } from "@nestjs/common";
+import { MessagePattern } from "@nestjs/microservices";
+import { of } from "rxjs";
+import { delay } from "rxjs/operators";
+
+@Controller()
+export class AppController {
+  @MessagePattern({ cmd: "ping" })
+  ping(_: any) {
+    return of("pong").pipe(delay(1000));
+  }
+}
+```
+
+Instead of using the classic `Get` decorator we use the `MessagePattern`, what this will do is trigerring the `ping` method when it receives a **ping** command. Then it just returns the string **pong** after a second delay.
+
+If you want to skip ahead you can access this [working version of create the first service](/)
+
+### Build the API Gateway
+
+You have a new service to run, but how can you access it? That's what we are going to do next. We'll create a new service that works as a HTTP Server and will map the request to the right service. This will like a proxy that also allows you to compose requests and reduce bandwidth usage in your applications.
+
+> If you are wondering who uses this, AWS offers it as SaaS. Netflix even built their own solution.
+
+Let's put in use your knowledge on the NestJs CLI:
+
+1. Go to the root of the project using your preferred command line tool.
+2. Execute `nest new api-gateway`, it will prompt you to choose between npm and yarn, I used npm.
+3. Delete the files `src/app.controller.spec.ts`.
+
+You are probably thinking, is that it? Well, no. But we are almost there, is time to hook the method we created.
+
+1. Go to the root to the API Gateway root folder using your preferred command line tool.
+2. Execute the command `npm i --save @nestjs/microservices`.
+3. Import the `ClientModule` and register the `ServiceA`.
+4. Inject the new service into the `AppService` and create a method to query the `ServiceA`.
+5. Use the new method from the `AppService` in the `AppController`.
+
+The `AppModule` will end up looking like this:
+
+```typescript
+import { Module } from "@nestjs/common";
+import { AppController } from "./app.controller";
+import { ClientsModule, Transport } from "@nestjs/microservices";
+import { AppService } from "./app.service";
+
+@Module({
+  imports: [
+    ClientsModule.register([
+      {
+        name: "SERVICE_A",
+        transport: Transport.TCP,
+        options: {
+          host: "127.0.0.1",
+          port: 8888
+        }
+      }
+    ])
+  ],
+  controllers: [AppController],
+  providers: [AppService]
+})
+export class AppModule {}
+```
+
+As you can see we need to setup the client to the service using the same transport and options but we give it a new property `name` to identify the instance of the service. You can also create a custom provider in order to fetch its configuration either from a service that can be local or externally accesed using HTTP.
+
+The `AppService` will end up looking like this:
+
+```typescript
+import { Injectable, Inject } from "@nestjs/common";
+import { ClientProxy } from "@nestjs/microservices";
+import { map } from "rxjs/operators";
+
+@Injectable()
+export class AppService {
+  constructor(
+    @Inject("SERVICE_A") private readonly clientServiceA: ClientProxy
+  ) {}
+
+  pingServiceA() {
+    const startTs = Date.now();
+    const pattern = { cmd: "ping" };
+    const payload = {};
+    return this.clientServiceA
+      .send<string>(pattern, payload)
+      .pipe(
+        map((message: string) => ({ message, duration: Date.now() - startTs }))
+      );
+  }
+}
+```
+
+What we are doing here is injecting the Client we imported in the `AppModule` using its name as the token to identify it. Then we create a simple method that gets the current time in milliseconds, sends a message to the service instance and once it gets a response it maps it to an object with the response message and it's total duration.
+
+The `AppController` will end up looking like this:
+
+```typescript
+import { Controller, Get } from "@nestjs/common";
+import { AppService } from "./app.service";
+
+@Controller()
+export class AppController {
+  constructor(private readonly appService: AppService) {}
+
+  @Get("/ping-a")
+  pingServiceA() {
+    return this.appService.pingServiceA();
+  }
+}
+```
+
+If you start `api-gateway` and `service-a` services using `npm run start:dev`, you'll be able to send a get request to your localhost under the port you chose for the api gateway, to the path _/ping-a_ and get as a response an object with a message saying **pong** and the duration it took.
+
+Although, this is not that impressive right? We could do this with a simple proxy. Things get slightly more complicated when you want to compose requests. But before we'll need to create a new service. Go ahead yourself and create the second service and hook it on the API Gateway as I have just showed you.
+
+If you want to skip ahead you can access this [working version of the api gateway with two services](/)
+
+> NOTE: In the second service I used a delay of 2 seconds so we can see the difference between services available.
+
+### Composing Requests
+
+We have everything in place, two services than can be running anywhere communicating through a single interface bringing more security and modularity to the application. But we want more, what if we had 12 services and we had to do over 100 requests to fill all the information in a single page, things start to get out of hand.
+
+We need a way to compose requests in the Api Gateway, for this I'm going to use some RxJs. The `AppController` of the Api Gateway will end up looking like this:
+
+```typescript
+import { Controller, Get } from "@nestjs/common";
+import { AppService } from "./app.service";
+import { zip } from "rxjs";
+import { map } from "rxjs/operators";
+
+@Controller()
+export class AppController {
+  constructor(private readonly appService: AppService) {}
+
+  @Get("/ping-a")
+  pingServiceA() {
+    return this.appService.pingServiceA();
+  }
+
+  @Get("/ping-b")
+  pingServiceB() {
+    return this.appService.pingServiceB();
+  }
+
+  @Get("/ping-all")
+  pingAll() {
+    return zip(
+      this.appService.pingServiceA(),
+      this.appService.pingServiceB()
+    ).pipe(
+      map(([pongServiceA, pongServiceB]) => ({
+        pongServiceA,
+        pongServiceB
+      }))
+    );
+  }
+}
+```
+
+The only thing new is the `pingAll` method. If you havent seen RxJs before this might look like some dark magic but its actually quite simple, we want to start the execution of our asynchronous calls in the same time and consolidates all the responses into a single one.
+
+> NOTE: The zip method takes _N_ observables and emits once all have emitted.
+
+If you dont want to do any of this by yourslef just access this [working version of the application](/)
+
+## Conclusion
+
+And just like that, you got the API Gateway to compose requests for you. This is just a taste of what Microservices can do for your architecture, there are many more patterns like API Gateway that you can explore. A cool homework would be to create a new service that keeps track of the running services and extending the imports using providers to allow dinamically setting the client specification.
