@@ -1,9 +1,12 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
+import { MessagePattern } from '@nestjs/microservices';
+import { of } from 'rxjs';
+import { delay } from 'rxjs/operators';
 
 @Controller()
 export class AppController {
-  @Get()
-  getHello(): string {
-    return 'hello';
+  @MessagePattern({ cmd: 'ping' })
+  ping(_: any) {
+    return of('pong').pipe(delay(1000));
   }
 }
