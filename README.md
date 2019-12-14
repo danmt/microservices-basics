@@ -1,4 +1,22 @@
-## Solution
+# Build an API Gateway with NestJs in 10 minutes
+
+This article intention is to give you a broader perspective into the Microservices architecture. There's many people out there claiming they have a Microservice oriented architecture but they lack of the core concepts on which this pattern relies. My goal is to write a set of articles looking to clear all the fog that appears when shifting from monolithic to highly distributed applications.
+
+The Microservices world is full of interesting and incredibly hard to implement stuff. When you get started you think that by just dividing your app in multiple services you are already there. Sadly, that's almost never true. It's more common than you think to see people building highly critical apps this way, without having in place all the core concepts.
+
+In this article I'm going to focus in the pattern API Gateway . If you are doing Microservice architecture you **SHOULD** know it pretty well, being that the case use this article to make sure you have clear knowledge on these concepts. If you are enterily new to Microservices, have fun and enjoy the ride.
+
+In traditional monolithic applications, API clients consume everything from the same location. Although, once you start using microservices things start to change, you may have multiple services running on entirely different locations.
+
+## What API Gateway means
+
+The non deterministic nature of microservice architecture lead us directly to whole new mess. But what can you do about it? One of the approaches out there is the API Gateway. From a 10,000ft view it's just an extra service that you put in front of your other services so you can do composition of services.
+
+## The Problem
+
+Let's say you have an application that consists on multiple services. We want to have our services location hidden from clients, so we'll have a proxy service that has to be able to compose multiple requests.
+
+## The Solution
 
 We'll be using NestJs, if you havent used it already its pretty much like Angular and I think it's a clever way to enable frontend developers to do thinks on the backend also. Anyway, it comes out with a CLI tool that allows generation of code. If you dont know whats a CLI this link explains it very well, same with NestJs, this link goes into detail of what NestJs is.
 
@@ -104,7 +122,7 @@ export class AppController {
 
 Instead of using the classic `Get` decorator we use the `MessagePattern`, what this will do is trigerring the `ping` method when it receives a **ping** command. Then it just returns the string **pong** after a second delay.
 
-If you want to skip ahead you can access this [working version of create the first service](/)
+If you want to skip ahead you can access this [working version of create the first service](https://github.com/danmt/microservices-basics/tree/create-the-first-service)
 
 ### Build the API Gateway
 
@@ -204,7 +222,7 @@ If you start `api-gateway` and `service-a` services using `npm run start:dev`, y
 
 Although, this is not that impressive right? We could do this with a simple proxy. Things get slightly more complicated when you want to compose requests. But before we'll need to create a new service. Go ahead yourself and create the second service and hook it on the API Gateway as I have just showed you.
 
-If you want to skip ahead you can access this [working version of the api gateway with two services](/)
+If you want to skip ahead you can access this [working version of the api gateway with one service](https://github.com/danmt/microservices-basics/tree/build-the-api-gateway) or [working version of the api gateway with one service with the two services](https://github.com/danmt/microservices-basics/tree/create-the-second-service)
 
 > NOTE: In the second service I used a delay of 2 seconds so we can see the difference between services available.
 
@@ -253,7 +271,7 @@ The only thing new is the `pingAll` method. If you havent seen RxJs before this 
 
 > NOTE: The zip method takes _N_ observables and emits once all have emitted.
 
-If you dont want to do any of this by yourslef just access this [working version of the application](/)
+If you dont want to do any of this by yourslef just access this [working version of the application](https://github.com/danmt/microservices-basics/)
 
 ## Conclusion
 
