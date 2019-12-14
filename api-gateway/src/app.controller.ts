@@ -9,4 +9,9 @@ export class AppController {
   pingServiceA() {
     return this.appService.pingServiceA();
   }
+
+  @Get('/ping-b')
+  pingServiceB() {
+    return this.appService.pingServiceB();
+  }
 }
