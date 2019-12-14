@@ -222,7 +222,7 @@ If you start `api-gateway` and `service-a` services using `npm run start:dev`, y
 
 Although, this is not that impressive right? We could do this with a simple proxy. Things get slightly more complicated when you want to compose requests. But before we'll need to create a new service. Go ahead yourself and create the second service and hook it on the API Gateway as I have just showed you.
 
-If you want to skip ahead you can access this [working version of the api gateway with one service](https://github.com/danmt/microservices-basics/tree/build-the-api-gateway) or [working version of the api gateway with one service with the two services](https://github.com/danmt/microservices-basics/tree/create-the-second-service)
+If you want to skip ahead you can access the [api gateway with one service](https://github.com/danmt/microservices-basics/tree/build-the-api-gateway) or [the api gateway with the two services](https://github.com/danmt/microservices-basics/tree/create-the-second-service)
 
 > NOTE: In the second service I used a delay of 2 seconds so we can see the difference between services available.
 
